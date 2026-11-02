@@ -70,7 +70,7 @@ for RUN in ONTRun13; do
 
             echo "Checking input directory: $SRC_DIR"
             echo "Final output: $FINAL_BAM"
-            
+
     for BAM in "$RUN_IN"/*_merged.bam; do
         [ -f "$BAM" ] || continue
 
@@ -181,7 +181,7 @@ echo ""
 
 for RUN in ONTRun13; do
     echo "  $RUN:"
-    find "$OUT_DIR" -name "*.qc.txt" | sort | while read -r QC; do
+    find "$OUT_DIR/$RUN" -name "*.qc.txt" | sort | while read -r QC; do
         SAMPLE=$(basename "$QC" .qc.txt)
         echo ""
         echo "    ── $SAMPLE ──"
