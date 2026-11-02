@@ -44,15 +44,6 @@ echo " Output: $OUT_DIR"
 echo "============================================================"
 
 for RUN in ONTRun13; do
-  SAMPLE="${SAMPLE_MAP[$BARCODE]}"
-
-        # bam_pass already sits inside ONTRun13.
-        SRC_DIR="$BASE_DIR/$BARCODE"
-
-        FINAL_BAM="$OUT_DIR/$RUN/${RUN}_${SAMPLE}_merged.bam"
-
-        echo "Checking input directory: $SRC_DIR"
-        echo "Final output: $FINAL_BAM"
 
     RUN_IN="$MERGED_DIR/$RUN"
     RUN_OUT="$OUT_DIR/$RUN"
@@ -68,6 +59,18 @@ for RUN in ONTRun13; do
     echo "  Processing $RUN"
     echo "╚══════════════════════════════════════════════════════╝"
 
+    for BARCODE in "${!SAMPLE_MAP[@]}"; do
+
+            SAMPLE="${SAMPLE_MAP[$BARCODE]}"
+
+            # bam_pass already sits inside ONTRun13.
+            SRC_DIR="$BASE_DIR/$BARCODE"
+
+            FINAL_BAM="$OUT_DIR/$RUN/${RUN}_${SAMPLE}_merged.bam"
+
+            echo "Checking input directory: $SRC_DIR"
+            echo "Final output: $FINAL_BAM"
+            
     for BAM in "$RUN_IN"/*_merged.bam; do
         [ -f "$BAM" ] || continue
 
