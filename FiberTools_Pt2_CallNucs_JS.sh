@@ -26,16 +26,22 @@ trap 'echo "ERROR at line $LINENO: $BASH_COMMAND" >&2' ERR
 module load Miniforge3/24.11.3-0
 module load SAMtools/1.23.1-GCC-13.3.0
 
-command -v samtools >/dev/null 2>&1 || {
-    echo "ERROR: samtools is not available in PATH." >&2
-    exit 1
-}
+
+# Activate your fibertools environment here if needed.
+
+for TOOL in samtools ft; do
+    if ! command -v "$TOOL" >/dev/null 2>&1; then
+        echo "ERROR: $TOOL is not available in PATH." >&2
+        exit 1
+    fi
+done
 
 MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams/ONTRun13"
 OUT_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
 THREADS=8
 
 mkdir -p "$OUT_DIR"
+shopt -s nullglob
 
 echo "============================================================"
 echo " FiberTools Pt2: Nucleosomes + pileups + decorators + QC"
@@ -45,31 +51,20 @@ echo "============================================================"
 
 for RUN in ONTRun13; do
 
-    RUN_IN="$MERGED_DIR/$RUN"
+    RUN_IN="$MERGED_DIR"
     RUN_OUT="$OUT_DIR/$RUN"
-    mkdir -p "$RUN_OUT"
 
     if [ ! -d "$RUN_IN" ]; then
         echo "⚠️  $RUN_IN not found — skipping $RUN"
         continue
     fi
 
+mkdir -p "$RUN_OUT"
+
     echo ""
     echo "╔══════════════════════════════════════════════════════╗"
     echo "  Processing $RUN"
     echo "╚══════════════════════════════════════════════════════╝"
-
-    for BARCODE in "${!SAMPLE_MAP[@]}"; do
-
-            SAMPLE="${SAMPLE_MAP[$BARCODE]}"
-
-            # bam_pass already sits inside ONTRun13.
-            SRC_DIR="$BASE_DIR/$BARCODE"
-
-            FINAL_BAM="$OUT_DIR/$RUN/${RUN}_${SAMPLE}_merged.bam"
-
-            echo "Checking input directory: $SRC_DIR"
-            echo "Final output: $FINAL_BAM"
 
     for BAM in "$RUN_IN"/*_merged.bam; do
         [ -f "$BAM" ] || continue
@@ -93,7 +88,7 @@ for RUN in ONTRun13; do
             echo "    ⏭️  nucs.bam already exists — skipping"
         fi
 
-        # ── Step 2: pileups ──────────────────────────────────────
+# ── Step 2: pileups ──────────────────────────────────────
         M6A_BG="$SAMPLE_DIR/${SAMPLE}.m6Apileup.bedgraph"
         CPG_BG="$SAMPLE_DIR/${SAMPLE}.5mcpileup.bedgraph"
         NUC_BG="$SAMPLE_DIR/${SAMPLE}.nucspileup.bedgraph"
@@ -125,7 +120,7 @@ for RUN in ONTRun13; do
             echo "    ⏭️  nuc pileup exists — skipping"
         fi
 
-        # ── Step 3: track-decorators (for IGV) ───────────────────
+# ── Step 3: track-decorators (for IGV) ───────────────────
         NUCTRACKS_BED="$SAMPLE_DIR/${SAMPLE}.nuctracks.bed"
         DECORATED_BED="$SAMPLE_DIR/decorated_${SAMPLE}.bed"
 
@@ -141,7 +136,7 @@ for RUN in ONTRun13; do
             echo "    ⏭️  nuctracks.bed already exists — skipping"
         fi
 
-        # ── Step 4: QC metrics ───────────────────────────────────
+# ── Step 4: QC metrics ───────────────────────────────────
         # ft qc reports per-fiber metrics including:
         #   - total fibers, mean fiber length
         #   - m6A count and fraction per fiber
