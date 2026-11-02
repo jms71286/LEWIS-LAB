@@ -19,11 +19,17 @@
 #   3. ft track-decorators → *.nuctracks.bed + decorated bed (for IGV)
 #   4. ft qc               → *.qc.txt (QC metrics table)
 # =============================================================================
-
+#!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "ERROR at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 module load Miniforge3/24.11.3-0
 module load SAMtools/1.23.1-GCC-13.3.0
+
+command -v samtools >/dev/null 2>&1 || {
+    echo "ERROR: samtools is not available in PATH." >&2
+    exit 1
+}
 
 MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams/ONTRun13"
 OUT_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
@@ -38,9 +44,18 @@ echo " Output: $OUT_DIR"
 echo "============================================================"
 
 for RUN in ONTRun13; do
+  SAMPLE="${SAMPLE_MAP[$BARCODE]}"
+
+        # bam_pass already sits inside ONTRun13.
+        SRC_DIR="$BASE_DIR/$BARCODE"
+
+        FINAL_BAM="$OUT_DIR/$RUN/${RUN}_${SAMPLE}_merged.bam"
+
+        echo "Checking input directory: $SRC_DIR"
+        echo "Final output: $FINAL_BAM"
 
     RUN_IN="$MERGED_DIR/$RUN"
-    RUN_OUT="$OUT_DIR"
+    RUN_OUT="$OUT_DIR/$RUN"
     mkdir -p "$RUN_OUT"
 
     if [ ! -d "$RUN_IN" ]; then
