@@ -26,7 +26,6 @@ trap 'echo "ERROR at line $LINENO: $BASH_COMMAND" >&2' ERR
 module load Miniforge3/24.11.3-0
 module load SAMtools/1.23.1-GCC-13.3.0
 conda create -n fibertools-rs -c conda-forge -c bioconda fibertools-rs
-$ conda update -n base -c conda-forge conda
 conda init bash
 conda activate fibertools-rs
 # Activate your fibertools environment here if needed.
