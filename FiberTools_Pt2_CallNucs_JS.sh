@@ -190,13 +190,3 @@ for RUN in ONTRun13; do
     done
     echo ""
 done
-
-echo ""
-echo "IGV tip: load decorated_*.bed to see nucleosome footprints"
-echo "per fiber. Color nucs.bam by: View → Color by → base"
-echo "modification 2-color (6mA)."
-echo ""
-echo "QC tip: check % fibers with 0 m6A — should be <1% for a"
-echo "successful Hia5 labeling. Mean m6A fraction should be ~5-6%."
-echo ""
-echo "Next: run FiberTools_Pt3_ExtractData_JS.sh"
