@@ -163,7 +163,7 @@ echo ""
 
 for RUN in ONTRun13; do
     echo "  $RUN:"
-    find "$OUT_DIR/$RUN" -name "*.qc.txt" | sort | while read -r QC; do
+    find "$OUT_DIR" -name "*.qc.txt" | sort | while read -r QC; do
         SAMPLE=$(basename "$QC" .qc.txt)
         echo ""
         echo "    ── $SAMPLE ──"
