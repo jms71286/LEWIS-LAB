@@ -62,7 +62,7 @@ echo " Output dir: $OUT_DIR"
 echo "============================================================"
 
 for RUN in ONTRun13; do
-
+    mkdir -p "$OUT_DIR/$RUN"
     echo ""
     echo "╔══════════════════════════════════════════════════════╗"
     echo "  Processing $RUN"
@@ -71,7 +71,7 @@ for RUN in ONTRun13; do
     for BARCODE in "${!SAMPLE_MAP[@]}"; do
 
         SAMPLE="${SAMPLE_MAP[$BARCODE]}"
-        SRC_DIR="$BASE_DIR/$RUN/$BARCODE"
+        SRC_DIR="$BASE_DIR/$BARCODE"
         FINAL_BAM="$OUT_DIR/$RUN/${RUN}_${SAMPLE}_merged.bam"
 
         # Skip if source barcode dir doesn't exist for this run
