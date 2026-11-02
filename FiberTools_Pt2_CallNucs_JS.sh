@@ -58,27 +58,31 @@ mkdir -p "$RUN_OUT"
     echo "  Processing $RUN"
     echo "╚══════════════════════════════════════════════════════╝"
 
-    for BAM in "$RUN_IN"/*_merged.bam; do
-        [ -f "$BAM" ] || continue
+BAMS=("$RUN_IN"/*_merged.bam)
 
-        SAMPLE=$(basename "$BAM" .bam)
-        SAMPLE_DIR="$RUN_OUT/$SAMPLE"
-        mkdir -p "$SAMPLE_DIR"
+   if (( ${#BAMS[@]} == 0 )); then
+       echo "ERROR: no *_merged.bam files found in $RUN_IN" >&2
+       exit 1
+   fi
 
-        NUCS_BAM="$SAMPLE_DIR/${SAMPLE}.nucs.bam"
+   mkdir -p "$RUN_OUT"
 
-        echo ""
-        echo "  ── $SAMPLE ──"
+   echo ""
+   echo "Processing $RUN"
+   echo "Found ${#BAMS[@]} merged BAM(s)"
 
-        # ── Step 1: add-nucleosomes ──────────────────────────────
-        if [ ! -f "$NUCS_BAM" ]; then
-            echo "    ft add-nucleosomes..."
-            ft add-nucleosomes "$BAM" "$NUCS_BAM" \
-                || { echo "    ❌ add-nucleosomes failed for $SAMPLE"; continue; }
-            samtools index "$NUCS_BAM"
-        else
-            echo "    ⏭️  nucs.bam already exists — skipping"
-        fi
+   for BAM in "${BAMS[@]}"; do
+
+       SAMPLE=$(basename "$BAM" .bam)
+       SAMPLE_DIR="$RUN_OUT/$SAMPLE"
+       mkdir -p "$SAMPLE_DIR"
+
+       NUCS_BAM="$SAMPLE_DIR/${SAMPLE}.nucs.bam"
+
+       echo ""
+       echo "Sample: $SAMPLE"
+       echo "Input:  $BAM"
+       echo "Output: $SAMPLE_DIR"
 
 # ── Step 2: pileups ──────────────────────────────────────
         M6A_BG="$SAMPLE_DIR/${SAMPLE}.m6Apileup.bedgraph"
