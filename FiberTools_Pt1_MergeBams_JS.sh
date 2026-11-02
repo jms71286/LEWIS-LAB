@@ -35,6 +35,7 @@
 set -euo pipefail
 
 module load Miniforge3/24.11.3-0
+$ conda update -n base -c conda-forge conda
 #curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fiberseq/fibertools-rs/releases/download/v0.13.1/fibertools-rs-installer.sh | sh
 conda install bioconda::fibertools-rs
 #conda create --name myenv python=3.10 ?
