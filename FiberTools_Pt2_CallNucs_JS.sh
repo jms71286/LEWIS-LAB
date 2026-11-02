@@ -26,15 +26,7 @@ trap 'echo "ERROR at line $LINENO: $BASH_COMMAND" >&2' ERR
 module load Miniforge3/24.11.3-0
 module load SAMtools/1.23.1-GCC-13.3.0
 
-
 # Activate your fibertools environment here if needed.
-
-for TOOL in samtools ft; do
-    if ! command -v "$TOOL" >/dev/null 2>&1; then
-        echo "ERROR: $TOOL is not available in PATH." >&2
-        exit 1
-    fi
-done
 
 MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams/ONTRun13"
 OUT_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
