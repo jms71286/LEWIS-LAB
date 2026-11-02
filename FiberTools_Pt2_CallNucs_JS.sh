@@ -25,7 +25,7 @@ set -euo pipefail
 module load Miniforge3/24.11.3-0
 module load SAMtools/1.23.1-GCC-13.3.0
 
-MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams"
+MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams/ONTRun13"
 OUT_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
 THREADS=8
 
@@ -39,7 +39,7 @@ echo "============================================================"
 
 for RUN in ONTRun13; do
 
-    RUN_IN="$MERGED_DIR"
+    RUN_IN="$MERGED_DIR/$RUN"
     RUN_OUT="$OUT_DIR"
     mkdir -p "$RUN_OUT"
 
