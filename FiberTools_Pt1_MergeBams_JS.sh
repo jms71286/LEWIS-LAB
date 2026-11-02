@@ -34,7 +34,10 @@
 
 set -euo pipefail
 
-module load Miniforge3/26.9.4-1
+module load Miniforge3/24.11.3-0
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/fiberseq/fibertools-rs/releases/download/v0.13.1/fibertools-rs-installer.sh | sh
+conda install bioconda::fibertools-rs
+#conda create --name myenv python=3.10 ?
 source activate /home/jms71286/fibertools
 
 BASE_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/bam_pass"
