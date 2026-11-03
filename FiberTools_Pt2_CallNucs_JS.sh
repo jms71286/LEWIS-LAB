@@ -35,151 +35,192 @@ OUT_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
 THREADS=8
 
 mkdir -p "$OUT_DIR"
+
 shopt -s nullglob
+BAMS=("${MERGED_DIR}"/*_merged.bam)
 
-echo "============================================================"
-echo " FiberTools Pt2: Nucleosomes + pileups + decorators + QC"
-echo " Input : $MERGED_DIR"
-echo " Output: $OUT_DIR"
-echo "============================================================"
+if (( ${#BAMS[@]} == 0 )); then
+    echo "ERROR: no *_merged.bam files found in $MERGED_DIR" >&2
+    exit 1
+fi
 
-for RUN in ONTRun13; do
+for BAM in "${BAMS[@]}"; do
+    SAMPLE="$(basename "$BAM" .bam)"
+    SAMPLE_DIR="${RUN_RESULTS}/${SAMPLE}"
 
-    RUN_IN="$MERGED_DIR"
-    RUN_OUT="$OUT_DIR/$RUN"
+    NUCS_BAM="${SAMPLE_DIR}/${SAMPLE}.nucs.bam"
+    M6A_PILEUP="${SAMPLE_DIR}/${SAMPLE}.m6a.pileup.tsv"
+    CPG_PILEUP="${SAMPLE_DIR}/${SAMPLE}.5mc.pileup.tsv"
+    NUC_PILEUP="${SAMPLE_DIR}/${SAMPLE}.nuc.pileup.tsv"
+    NUCTRACKS_BED="${SAMPLE_DIR}/${SAMPLE}.nuctracks.bed"
+    DECORATED_BED="${SAMPLE_DIR}/${SAMPLE}.decorators.bed"
+    QC_OUT="${SAMPLE_DIR}/${SAMPLE}.qc.tsv"
+    VALIDATE_OUT="${SAMPLE_DIR}/${SAMPLE}.validate.txt"
 
-    if [ ! -d "$RUN_IN" ]; then
-        echo "⚠️  $RUN_IN not found — skipping $RUN"
-        continue
+    mkdir -p "$SAMPLE_DIR"
+
+    echo
+    echo "------------------------------------------------------------"
+    echo "Sample: $SAMPLE"
+    echo "Input:  $BAM"
+    echo "Output: $SAMPLE_DIR"
+    echo "------------------------------------------------------------"
+
+    samtools quickcheck -v "$BAM"
+
+    if [[ ! -s "${BAM}.bai" ]]; then
+        samtools index -@ "$THREADS" "$BAM"
     fi
 
-mkdir -p "$RUN_OUT"
+    # Test whether the merged BAM contains the annotations FiberTools needs.
+    echo "Validating m6A annotations in input BAM..."
 
-    echo ""
-    echo "╔══════════════════════════════════════════════════════╗"
-    echo "  Processing $RUN"
-    echo "╚══════════════════════════════════════════════════════╝"
+    if ! "${FT[@]}" validate --reads 5000 "$BAM" \
+        >"$VALIDATE_OUT" 2>&1; then
+        cat "$VALIDATE_OUT" >&2
+        echo "ERROR: FiberTools validation failed for $BAM" >&2
+        echo "The BAM may not contain usable m6A MM/ML tags." >&2
+        exit 1
+    fi
 
-BAMS=("$RUN_IN"/*_merged.bam)
+    cat "$VALIDATE_OUT"
 
-   if (( ${#BAMS[@]} == 0 )); then
-       echo "ERROR: no *_merged.bam files found in $RUN_IN" >&2
-       exit 1
-   fi
+        # Add nucleosome and MSP annotations.
+        if [[ ! -s "$NUCS_BAM" ]]; then
+            echo "Adding nucleosome and MSP calls..."
 
-   mkdir -p "$RUN_OUT"
+            "${FT[@]}" \
+                --threads "$THREADS" \
+                add-nucleosomes \
+                "$BAM" \
+                "$NUCS_BAM"
 
-   echo ""
-   echo "Processing $RUN"
-   echo "Found ${#BAMS[@]} merged BAM(s)"
-
-   for BAM in "${BAMS[@]}"; do
-
-       SAMPLE=$(basename "$BAM" .bam)
-       SAMPLE_DIR="$RUN_OUT/$SAMPLE"
-       mkdir -p "$SAMPLE_DIR"
-
-       NUCS_BAM="$SAMPLE_DIR/${SAMPLE}.nucs.bam"
-
-       echo ""
-       echo "Sample: $SAMPLE"
-       echo "Input:  $BAM"
-       echo "Output: $SAMPLE_DIR"
-
-# ── Step 2: pileups ──────────────────────────────────────
-        M6A_BG="$SAMPLE_DIR/${SAMPLE}.m6Apileup.bedgraph"
-        CPG_BG="$SAMPLE_DIR/${SAMPLE}.5mcpileup.bedgraph"
-        NUC_BG="$SAMPLE_DIR/${SAMPLE}.nucspileup.bedgraph"
-
-        if [ ! -f "$M6A_BG" ]; then
-            echo "    ft pileup — m6A..."
-            ft pileup --m6a --per-base --fiber-coverage \
-                --out "$M6A_BG" "$NUCS_BAM" \
-                || echo "    ❌ m6A pileup failed for $SAMPLE"
+            samtools quickcheck -v "$NUCS_BAM"
+            samtools index -@ "$THREADS" "$NUCS_BAM"
         else
-            echo "    ⏭️  m6A pileup exists — skipping"
+            echo "Nucleosome BAM already exists. Skipping."
         fi
 
-        if [ ! -f "$CPG_BG" ]; then
-            echo "    ft pileup — 5mC..."
-            ft pileup --cpg --per-base --fiber-coverage \
-                --out "$CPG_BG" "$NUCS_BAM" \
-                || echo "    ❌ 5mC pileup failed for $SAMPLE"
+        # Validate m6A plus nucleosome annotations.
+        echo "Validating nucleosome BAM..."
+        "${FT[@]}" validate --reads 5000 "$NUCS_BAM"
+
+        # m6A-only pileup.
+        if [[ ! -s "$M6A_PILEUP" ]]; then
+            echo "Creating m6A pileup..."
+
+            "${FT[@]}" \
+                --threads "$THREADS" \
+                pileup \
+                --m6a \
+                --no-msp \
+                --no-nuc \
+                --per-base \
+                --fiber-coverage \
+                --out "$M6A_PILEUP" \
+                "$NUCS_BAM"
         else
-            echo "    ⏭️  5mC pileup exists — skipping"
+            echo "m6A pileup already exists. Skipping."
         fi
 
-        if [ ! -f "$NUC_BG" ]; then
-            echo "    ft pileup — nucleosome coverage..."
-            ft pileup --per-base --fiber-coverage \
-                --out "$NUC_BG" "$NUCS_BAM" \
-                || echo "    ❌ nuc pileup failed for $SAMPLE"
+        # 5mC-only pileup.
+        # This can be empty or uninformative if the BAM does not contain 5mC calls.
+        if [[ ! -s "$CPG_PILEUP" ]]; then
+            echo "Creating 5mC pileup..."
+
+            "${FT[@]}" \
+                --threads "$THREADS" \
+                pileup \
+                --cpg \
+                --no-msp \
+                --no-nuc \
+                --per-base \
+                --fiber-coverage \
+                --out "$CPG_PILEUP" \
+                "$NUCS_BAM"
         else
-            echo "    ⏭️  nuc pileup exists — skipping"
+            echo "5mC pileup already exists. Skipping."
         fi
+        # Nucleosome pileup. MSPs are excluded.
+           if [[ ! -s "$NUC_PILEUP" ]]; then
+               echo "Creating nucleosome pileup..."
 
-# ── Step 3: track-decorators (for IGV) ───────────────────
-        NUCTRACKS_BED="$SAMPLE_DIR/${SAMPLE}.nuctracks.bed"
-        DECORATED_BED="$SAMPLE_DIR/decorated_${SAMPLE}.bed"
+               "${FT[@]}" \
+                   --threads "$THREADS" \
+                   pileup \
+                   --no-msp \
+                   --per-base \
+                   --fiber-coverage \
+                   --out "$NUC_PILEUP" \
+                   "$NUCS_BAM"
+           else
+               echo "Nucleosome pileup already exists. Skipping."
+           fi
 
-        if [ ! -f "$NUCTRACKS_BED" ]; then
-            echo "    ft track-decorators..."
-            ft track-decorators \
-                --bed12 "$NUCTRACKS_BED" \
-                --decorator "$DECORATED_BED" \
-                "$NUCS_BAM" \
-                || echo "    ❌ track-decorators failed for $SAMPLE"
-            echo "    ✅  track-decorators done"
-        else
-            echo "    ⏭️  nuctracks.bed already exists — skipping"
-        fi
+           # Decorator tracks for IGV.
+           if [[ ! -s "$NUCTRACKS_BED" || ! -s "$DECORATED_BED" ]]; then
+               echo "Creating IGV decorator tracks..."
 
-# ── Step 4: QC metrics ───────────────────────────────────
-        # ft qc reports per-fiber metrics including:
-        #   - total fibers, mean fiber length
-        #   - m6A count and fraction per fiber
-        #   - number of nucleosomes per fiber
-        #   - MSP (methylated span) length distribution
-        #   - % fibers with 0 m6A (indicates labeling failure if high)
-        # --m6a-per-msp also reports m6A density within each
-        # methylated span (linker/accessible element), useful for
-        # checking Hia5 labeling efficiency
-        QC_OUT="$SAMPLE_DIR/${SAMPLE}.qc.txt"
+               "${FT[@]}" \
+                   --threads "$THREADS" \
+                   track-decorators \
+                   --bed12 "$NUCTRACKS_BED" \
+                   --decorator "$DECORATED_BED" \
+                   "$NUCS_BAM"
+           else
+               echo "Decorator tracks already exist. Skipping."
+           fi
 
-        if [ ! -f "$QC_OUT" ]; then
-            echo "    ft qc..."
-            ft qc \
-                --m6a-per-msp \
-                "$NUCS_BAM" \
-                "$QC_OUT" \
-                || echo "    ❌ qc failed for $SAMPLE"
-            echo "    ✅  QC done → $(basename $QC_OUT)"
-        else
-            echo "    ⏭️  QC already exists — skipping"
-        fi
+           # QC metrics.
+           if [[ ! -s "$QC_OUT" ]]; then
+               echo "Running FiberTools QC..."
 
-        echo "    ✅  $SAMPLE complete"
+               "${FT[@]}" \
+                   --threads "$THREADS" \
+                   qc \
+                   --m6a-per-msp \
+                   "$NUCS_BAM" \
+                   "$QC_OUT"
+           else
+               echo "QC output already exists. Skipping."
+           fi
 
-    done
-done
+           echo "Completed: $SAMPLE"
+       done
 
-# =============================================================================
-# Summary — print key QC metrics across all samples
-# =============================================================================
-echo ""
-echo "============================================================"
-echo " All done. QC summary:"
-echo "============================================================"
-echo ""
+       # ---------------------------------------------------------------------------
+       # Summary
+       # ---------------------------------------------------------------------------
 
-for RUN in ONTRun13; do
-    echo "  $RUN:"
-    find "$OUT_DIR/$RUN" -name "*.qc.txt" | sort | while read -r QC; do
-        SAMPLE=$(basename "$QC" .qc.txt)
-        echo ""
-        echo "    ── $SAMPLE ──"
-        # Print the header + data rows, indented
-        cat "$QC" | head -20 | sed 's/^/      /'
-    done
-    echo ""
-done
+       echo
+       echo "============================================================"
+       echo "Pipeline complete"
+       echo "============================================================"
+
+       for QC in "${RUN_RESULTS}"/*/*.qc.tsv; do
+           [[ -f "$QC" ]] || continue
+
+           SAMPLE="$(basename "$QC" .qc.tsv)"
+
+           echo
+           echo "Sample: $SAMPLE"
+           head -n 20 "$QC" | sed 's/^/  /'
+       done
+
+       echo
+       echo "Merged BAMs:"
+       find "$MERGED_DIR" -maxdepth 1 -type f -name "*_merged.bam" \
+           -printf '%f\n' |
+       sort
+
+       echo
+       echo "FiberTools results:"
+       find "$RUN_RESULTS" -maxdepth 2 -type f \
+           -printf '%P\n' |
+       sort
+
+       echo
+       echo "Cleaning temporary sorted BAMs..."
+       rm -rf -- "$SORTED_TMP"
+
+       echo "Done."
