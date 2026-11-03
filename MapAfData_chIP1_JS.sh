@@ -12,7 +12,16 @@
 #   fastqPath = folder holding <SampleID>_R1.fastq.gz and <SampleID>_R2.fastq.gz
 #   outdir    = output folder
 
-set -euo pipefail
+cd /lustre2/scratch/jms71286/chandler
+OUTDIR="/lustre2/scratch/jms71286/chandler"
+
+if [ ! -d $OUTDIR ]
+then
+    mkdir -p $OUTDIR
+fi
+
+module load Trim_Galore/0.6.10-GCCcore-12.3.0
+trim_galore --paired --length 20 --fastqc --gzip -o $OUTDIR/TrimmedReads ${FASTQ}/*fastq\.gz
 
 ################### input files ###################
 # Exact names (no wildcard), so one sample can never pick up another's reads
@@ -24,11 +33,17 @@ for f in "$read1" "$read2"; do
 done
 
 ################### output folders ###################
+# trimmed - cleaned TrimmedFastQs
+# tmp file - sorting temporary files
+# sorted Bam - aligned reads
+# big wigs - coverage tracks
+# MACS peaks - peak calling Output
 trimmed="/lustre2/scratch/jms71286/ChiPSeq/chandler/TrimmedFastQs"
 tmp="/lustre2/scratch/jms71286/ChiPSeq/chandler/tempFile"
 BAMDIR="/lustre2/scratch/jms71286/ChiPSeq/chandler/SortedBamFiles"
 BWDIR="/lustre2/scratch/jms71286/ChiPSeq/chandler/BigWigs"
 PEAKDIR="/lustre2/scratch/jms71286/ChiPSeq/chandler/MACSPeaks"
+
 mkdir -p "$trimmed" "$tmp" "$BAMDIR" "$BWDIR" "$PEAKDIR"
 
 bam="${BAMDIR}/${accession}.bam"
