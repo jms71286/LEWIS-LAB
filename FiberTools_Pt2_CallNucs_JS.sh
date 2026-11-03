@@ -20,15 +20,11 @@
 #   4. ft qc               → *.qc.txt (QC metrics table)
 # =============================================================================
 #!/usr/bin/env bash
-set -euo pipefail
-trap 'echo "ERROR at line $LINENO: $BASH_COMMAND" >&2' ERR
+set -Eeuo pipefail
+trap 'echo "ERROR at line ${LINENO}: ${BASH_COMMAND}" >&2' ERR
 
 module load Miniforge3/24.11.3-0
 module load SAMtools/1.23.1-GCC-13.3.0
-conda create -n fibertools-rs -c conda-forge -c bioconda fibertools-rs
-conda init bash
-conda activate fibertools-rs
-# Activate your fibertools environment here if needed.
 
 MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams/ONTRun13"
 OUT_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
