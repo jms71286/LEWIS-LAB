@@ -42,7 +42,7 @@ fi
 
 for BAM in "${BAMS[@]}"; do
     SAMPLE="$(basename "$BAM" .bam)"
-    SAMPLE_DIR="${RUN_RESULTS}/${SAMPLE}"
+    SAMPLE_DIR="$OUT_DIR/${SAMPLE}"
 
     NUCS_BAM="${SAMPLE_DIR}/${SAMPLE}.nucs.bam"
     M6A_PILEUP="${SAMPLE_DIR}/${SAMPLE}.m6a.pileup.tsv"
@@ -59,7 +59,7 @@ for BAM in "${BAMS[@]}"; do
     echo "------------------------------------------------------------"
     echo "Sample: $SAMPLE"
     echo "Input:  $BAM"
-    echo "Output: $SAMPLE_DIR"
+    echo "Output: $OUT_DIR"
     echo "------------------------------------------------------------"
 
     samtools quickcheck -v "$BAM"
@@ -193,7 +193,7 @@ for BAM in "${BAMS[@]}"; do
        echo "Pipeline complete"
        echo "============================================================"
 
-       for QC in "${RUN_RESULTS}"/*/*.qc.tsv; do
+       for QC in "${OUT_DIR}"/*/*.qc.tsv; do
            [[ -f "$QC" ]] || continue
 
            SAMPLE="$(basename "$QC" .qc.tsv)"
@@ -211,7 +211,7 @@ for BAM in "${BAMS[@]}"; do
 
        echo
        echo "FiberTools results:"
-       find "$RUN_RESULTS" -maxdepth 2 -type f \
+       find "$OUT_DIR" -maxdepth 2 -type f \
            -printf '%P\n' |
        sort
 
