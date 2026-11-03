@@ -59,99 +59,6 @@ echo "Results:    $RUN_RESULTS"
 echo "Threads:    $THREADS"
 echo "============================================================"
 
-# ---------------------------------------------------------------------------
-# Environment checks
-# ---------------------------------------------------------------------------
-
-command -v samtools >/dev/null 2>&1 || {
-    echo "ERROR: samtools was not found after loading the module." >&2
-    exit 1
-}
-
-conda env list | awk '{print $1}' | grep -qx "$CONDA_ENV" || {
-    echo "ERROR: Conda environment '$CONDA_ENV' does not exist." >&2
-    echo "Create it once from the login node with:" >&2
-    echo "  conda create -y -n $CONDA_ENV -c conda-forge -c bioconda fibertools-rs=0.13.1" >&2
-    exit 1
-}
-
-"${FT[@]}" --version
-
-# ---------------------------------------------------------------------------
-# Part 1: filter, sort, merge, and index BAMs
-# ---------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo "Part 1: Merge split BAMs"
-echo "============================================================"
-
-for BARCODE in barcode07 barcode08 barcode09; do
-    SAMPLE="${SAMPLE_MAP[$BARCODE]}"
-    SRC_DIR="${BASE_DIR}/${BARCODE}"
-    FINAL_BAM="${MERGED_DIR}/${RUN}_${SAMPLE}_merged.bam"
-
-    echo
-    echo "Processing $BARCODE: $SAMPLE"
-
-    if [[ ! -d "$SRC_DIR" ]]; then
-        echo "WARNING: source directory not found: $SRC_DIR" >&2
-        continue
-    fi
-
-    mapfile -d '' INPUT_BAMS < <(
-        find "$SRC_DIR" -maxdepth 1 -type f -name "*.bam" -print0 | sort -z
-    )
-
-    if (( ${#INPUT_BAMS[@]} == 0 )); then
-        echo "WARNING: no BAM files found in $SRC_DIR" >&2
-        continue
-    fi
-
-    if [[ -s "$FINAL_BAM" && -s "${FINAL_BAM}.bai" ]]; then
-        echo "Merged BAM and index already exist. Skipping merge."
-    else
-        SORTED_BAMS=()
-
-        for BAM in "${INPUT_BAMS[@]}"; do
-            BAM_BASE="$(basename "$BAM" .bam)"
-            SORTED_BAM="${SORTED_TMP}/${RUN}_${SAMPLE}_${BAM_BASE}.q10.sorted.bam"
-
-            if [[ ! -s "$SORTED_BAM" ]]; then
-                echo "Filtering and sorting: $(basename "$BAM")"
-
-                samtools view \
-                    -@ "$THREADS" \
-                    -b \
-                    -q 10 \
-                    -F 2308 \
-                    "$BAM" |
-                samtools sort \
-                    -@ "$THREADS" \
-                    -o "$SORTED_BAM" \
-                    -
-            fi
-
-            samtools quickcheck -v "$SORTED_BAM"
-            SORTED_BAMS+=("$SORTED_BAM")
-        done
-
-        if (( ${#SORTED_BAMS[@]} == 1 )); then
-            cp -- "${SORTED_BAMS[0]}" "$FINAL_BAM"
-        else
-            samtools merge \
-                -f \
-                -@ "$THREADS" \
-                "$FINAL_BAM" \
-                "${SORTED_BAMS[@]}"
-        fi
-
-        samtools quickcheck -v "$FINAL_BAM"
-        samtools index -@ "$THREADS" "$FINAL_BAM"
-    fi
-
-    echo "Created: $FINAL_BAM"
-done
 
 # ---------------------------------------------------------------------------
 # Part 2: nucleosome calls, pileups, decorators, and QC
@@ -351,3 +258,12 @@ echo "Cleaning temporary sorted BAMs..."
 rm -rf -- "$SORTED_TMP"
 
 echo "Done."
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+
+echo
+echo "============================================================"
+echo "Pipeline complete"
+echo "============================================================"
