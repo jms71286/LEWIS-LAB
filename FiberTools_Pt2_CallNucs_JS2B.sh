@@ -42,33 +42,6 @@ SORTED_TMP="${MERGED_BASE}/sorted_${RUN}_tmp"
 # Use conda run rather than conda activate in a noninteractive job.
 FT=(conda run --no-capture-output -n "$CONDA_ENV" ft)
 
-declare -A SAMPLE_MAP=(
-    [barcode07]="CEA10_conidia1_barcode07"
-    [barcode08]="CEA10_conidia2_barcode08"
-    [barcode09]="CEA10_conidia3_barcode09"
-)
-
-mkdir -p "$MERGED_DIR" "$RUN_RESULTS" "$SORTED_TMP"
-
-echo "============================================================"
-echo "FiberTools pipeline"
-echo "Run:        $RUN"
-echo "Input:      $BASE_DIR"
-echo "Merged:     $MERGED_DIR"
-echo "Results:    $RUN_RESULTS"
-echo "Threads:    $THREADS"
-echo "============================================================"
-
-
-# ---------------------------------------------------------------------------
-# Part 2: nucleosome calls, pileups, decorators, and QC
-# ---------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo "Part 2: FiberTools processing"
-echo "============================================================"
-
 shopt -s nullglob
 BAMS=("${MERGED_DIR}"/*_merged.bam)
 
@@ -221,49 +194,3 @@ for BAM in "${BAMS[@]}"; do
 
     echo "Completed: $SAMPLE"
 done
-
-# ---------------------------------------------------------------------------
-# Summary
-# ---------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo "Pipeline complete"
-echo "============================================================"
-
-for QC in "${RUN_RESULTS}"/*/*.qc.tsv; do
-    [[ -f "$QC" ]] || continue
-
-    SAMPLE="$(basename "$QC" .qc.tsv)"
-
-    echo
-    echo "Sample: $SAMPLE"
-    head -n 20 "$QC" | sed 's/^/  /'
-done
-
-echo
-echo "Merged BAMs:"
-find "$MERGED_DIR" -maxdepth 1 -type f -name "*_merged.bam" \
-    -printf '%f\n' |
-sort
-
-echo
-echo "FiberTools results:"
-find "$RUN_RESULTS" -maxdepth 2 -type f \
-    -printf '%P\n' |
-sort
-
-echo
-echo "Cleaning temporary sorted BAMs..."
-rm -rf -- "$SORTED_TMP"
-
-echo "Done."
-
-# ---------------------------------------------------------------------------
-# Summary
-# ---------------------------------------------------------------------------
-
-echo
-echo "============================================================"
-echo "Pipeline complete"
-echo "============================================================"
