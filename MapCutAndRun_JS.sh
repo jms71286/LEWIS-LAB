@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=zl_mapChIPseq
+#SBATCH --job-name=MapCutAndRun_JS
 #SBATCH --partition=batch
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=zlewis@uga.edu
+#SBATCH --mail-user=jms71286@uga.edu
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=50gb
