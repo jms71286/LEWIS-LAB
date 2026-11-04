@@ -10,9 +10,9 @@
 #SBATCH --output=../MapCutAndRun.%j.out
 #SBATCH --error=../MapCutAndRun.%j.err
 
-cd /scratch/jms71286/cutandrun
-#read in variables from the config file ($threads, $FASTQ, $OUTDIR, )
+set -euo pipefail
 
+cd /scratch/jms71286/cutandrun
 source configJS.txt
 
 OUTDIR="/scratch/jms71286/cutandrun/output"
@@ -21,9 +21,9 @@ mkdir ${OUTDIR}
 #process reads using trimGalore
 
 module load Trim_Galore/0.6.10-GCCcore-12.3.0
-trim_galore --paired --length 20 --fastqc --gzip -o ${OUTDIR}/TrimmedReads ${FASTQ}/*fastq\.gz
+trim_galore --paired --length 20 --fastqc --gzip -o ${OUTDIR}/TrimmedReads ${FASTQ}/*fastq.gz
 #
-FILES="${OUTDIR}/TrimmedReads/*R1_001_trimmed.fq.gz" #Don't forget the *
+FILES="${OUTDIR}/TrimmedReads/*R1_001_val_1.fq.gz" #Don't forget the *
 #
  mkdir "${OUTDIR}/SortedBamFiles"
  mkdir "${OUTDIR}/BigWigs"
@@ -42,7 +42,7 @@ do
 
 	file=${f##*/}
 	#remove ending from file name to create shorter names for bam files and other downstream output
-	name=${file/%_S[1-12]*_L001_R1_001_trimmed.fq.gz/}
+	name=${file/%_S[1-12]*_L001_R1_001_val_1.fq.gz/}
 
 #
 # 	# File Vars
