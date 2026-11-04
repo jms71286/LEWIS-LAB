@@ -10,13 +10,10 @@
 #SBATCH --output=../MapCutAndRun.%j.out
 #SBATCH --error=../MapCutAndRun.%j.err
 
-set -euo pipefail
-
 cd /scratch/jms71286/cutandrun
 source ./configJS.txt
 
 OUTDIR="/scratch/jms71286/cutandrun/output"
-mkdir ${OUTDIR}
 
 #process reads using trimGalore
 
