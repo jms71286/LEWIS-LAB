@@ -5,7 +5,7 @@
 #SBATCH --mail-user=jms71286@uga.edu
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
-#SBATCH --mem=50gb
+#SBATCH --mem=50G
 #SBATCH --time=48:00:00
 #SBATCH --output=../MapCutAndRun.%j.out
 #SBATCH --error=../MapCutAndRun.%j.err
@@ -14,24 +14,6 @@ cd /scratch/jms71286/cutandrun
 source configJS.txt
 
 OUTDIR="/scratch/jms71286/cutandrun/output"
-
-#process reads using trimGalore
-module load Trim_Galore/0.6.10-GCCcore-12.3.0
-#!/bin/bash
-#SBATCH --job-name=MapCutAndRun_JS
-#SBATCH --partition=batch
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=jms71286@uga.edu
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
-#SBATCH --mem=50G
-#SBATCH --time=48:00:00
-#SBATCH --output=../MapCutAndRun.%j.out
-#SBATCH --error=../MapCutAndRun.%j.err
-
-
-cd /scratch/jms71286/cutandrun
-source configJS.txt
 
 # Required configuration:
 # FASTQ="/path/to/raw_fastq_directory"
@@ -62,13 +44,12 @@ if (( ${#raw_r1_files[@]} == 0 )); then
     exit 1
 fi
 
-for read1 in "${raw_r1_files[@]}"; do
-    read2="${read1%_R1_001.fastq.gz}_R2_001.fastq.gz"
+raw_r2_files=( "$FASTQ"/*_R2_001.fastq.gz )
 
-    if [[ ! -s "$read2" ]]; then
-        echo "ERROR: Missing or empty R2 file: $read2" >&2
-        exit 1
-    fi
+if (( ${#raw_r2_files[@]} == 0 )); then
+    echo "ERROR: No *_R2_001.fastq.gz files found in $FASTQ" >&2
+    exit 1
+fi
 
     trim_galore \
         --paired \
@@ -76,7 +57,7 @@ for read1 in "${raw_r1_files[@]}"; do
         --fastqc \
         --gzip \
         --output_dir "$OUTDIR/TrimmedReads" \
-        "$read1" "$read2"
+        "$raw_r1_files" "$raw_r2_files"
 done
 
 # -------------------------
