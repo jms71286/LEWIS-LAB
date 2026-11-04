@@ -16,7 +16,7 @@ cd /scratch/jms71286/cutandrun
 
 source configJS.txt
 
-OUTDIR=../$output
+OUTDIR="/scratch/jms71286/cutandrun/output"
 mkdir ${OUTDIR}
 
 #process reads using trimGalore
