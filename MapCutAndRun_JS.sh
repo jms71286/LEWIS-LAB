@@ -13,6 +13,7 @@
 cd $SLURM_SUBMIT_DIR
 source configJS.txt
 
+GENOME="/home/zlewis/Genomes/AfumagatisGenome/Af_CEA10/Afum_A1163_edit6.fasta"
 OUTDIR="/scratch/jms71286/cutandrun/output"
 FASTQ="/scratch/jms71286/cutandrun/FastqFiles"
 
@@ -60,6 +61,10 @@ samtools index "$bam"
 
 ml deepTools/3.5.5-gfbf-2023a
 #Plot all reads
+THREADS=12
+BIN="25"
+SMOOTH="75"
+
 bamCoverage -p $THREADS -bs $BIN --normalizeUsing BPM --minMappingQuality 10 --smoothLength $SMOOTH -of bigwig -b "$bam" -o "${bigwig}.bin_${BIN}.smooth_${SMOOTH}Bulk.bw"
 
 #plot mononucleosomes

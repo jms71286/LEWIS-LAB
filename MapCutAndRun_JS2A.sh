@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=MapCutAndRun_JS
+#SBATCH --job-name=cutANDrun
 #SBATCH --partition=batch
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=jms71286@uga.edu
@@ -7,62 +7,56 @@
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=50gb
 #SBATCH --time=48:00:00
-#SBATCH --output=../MapCutAndRun.%j.out
-#SBATCH --error=../MapCutAndRun.%j.err
+#SBATCH --output=./log.%j.out
+#SBATCH --error=./log.%j.err
 
-
-cd /scratch/jms71286/cutandrun
+cd $SLURM_SUBMIT_DIR
 source configJS.txt
 
+GENOME="/home/zlewis/Genomes/AfumagatisGenome/Af_CEA10/Afum_A1163_edit6.fasta"
 OUTDIR="/scratch/jms71286/cutandrun/output"
-mkdir ${OUTDIR}
+FASTQ="/scratch/jms71286/cutandrun/FastqFiles"
 
-#process reads using trimGalore
-
+# #process reads using trimGalore
+#
 module load Trim_Galore/0.6.10-GCCcore-12.3.0
-trim_galore --paired --length 20 --fastqc --gzip -o ${OUTDIR}/TrimmedReads ${FASTQ}/*fastq.gz
+trim_galore --paired --length 20 --fastqc --gzip -o ${OUTDIR}/TrimmedReads ${FASTQ}/*fastq\.gz
 #
-FILES="${OUTDIR}/TrimmedReads/*R1_001_val_1.fq.gz" #Don't forget the *
+FILES="${OUTDIR}/TrimmedReads/*R1_001_val_1.fq\.gz" #Don't forget the *
 #
- mkdir "${OUTDIR}/SortedBamFiles"
- mkdir "${OUTDIR}/BigWigs"
- mkdir "${OUTDIR}/Peaks"
-#mkdir "$OUTDIR/HomerTagDirectories"
-#mkdir "$OUTDIR/TdfFiles"
-#
-#Iterate over the files
-for f in $FILES
-do
-#
-# 	#Examples to Get Different parts of the file name
-# 		#See here for details: http://tldp.org/LDP/abs/html/refcards.html#AEN22664
-		#${string//substring/replacement}
-# 		#dir=${f%/*}
+for f in "${OUTDIR}"/TrimmedReads/*_R1_001_val_1.fq.gz; do
+    name=$(basename "$f" _R1_001_val_1.fq.gz)
+    read2="${OUTDIR}/TrimmedReads/${name}_R2_001_val_2.fq.gz"
+    bam="${OUTDIR}/SortedBamFiles/${name}.bam"
+    bigwig="${OUTDIR}/BigWigs/${name}"
 
-	file=${f##*/}
-	#remove ending from file name to create shorter names for bam files and other downstream output
-	name=${file/%_S[1-12]*_L001_R1_001_val_1.fq.gz/}
+    bwa mem -t "$THREADS" "$GENOME" "$f" "$read2" |
+        samtools view -bhSu - |
+        samtools sort -@ "$THREADS" \
+            -T "${OUTDIR}/SortedBamFiles/${name}.tmp" \
+            -o "$bam" -
 
-#
 # 	# File Vars
 # 	#use sed to get the name of the second read matching the input file
-	read2=$(echo "$f" | sed 's/R1_001_trimmed.fq.gz/R2_001_trimmed.fq.gz/g')
+	read2=$(echo "$f" | sed 's/R1_001_val_1.fq\.gz/R2_001_val_2.fq\.gz/g')
 	#variable for naming bam file
  	bam="${OUTDIR}/SortedBamFiles/${name}.bam"
 	#variable name for bigwig output
 	bigwig="${OUTDIR}/BigWigs/${name}"
 	#QualityBam="${OUTDIR}/SortedBamFiles/${name}_Q30.bam"
 #
-
 ml SAMtools/1.23.1-GCC-13.3.0
 ml BWA/0.7.17-GCCcore-11.3.0
 #
-bwa mem -M -v 3 -t $THREADS $GENOME $f $read2 | samtools view -bhSu - | samtools sort -@ $THREADS -T $OUTDIR/SortedBamFiles/tempReps -o "$bam" -
-samtools index "$bam"
+THREADS="12"
+BIN="25"
+SMOOTH="75"
+
+samtools sort -@ "$THREADS" -T "${OUTDIR}/SortedBamFiles/${name}.tmp" -o "$bam" -
+samtools flagstat "$bam" > "${OUTDIR}/QC/${name}.flagstat.txt"
 
 #samtools view -b -q 30 $bam > "$QualityBam"
 #samtools index "$QualityBam"
-
 ############################
 # # #deeptools
 
