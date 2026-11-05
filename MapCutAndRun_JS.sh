@@ -7,10 +7,10 @@
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=50gb
 #SBATCH --time=48:00:00
-#SBATCH --output=../MapCutAndRun.%j.out
-#SBATCH --error=../MapCutAndRun.%j.err
+#SBATCH --output=./MapCutAndRun.%j.out
+#SBATCH --error=./MapCutAndRun.%j.err
 
-cd /scratch/jms71286/cutandrun
+cd $SLURM_SUBMIT_DIR
 source configJS.txt
 
 OUTDIR="/scratch/jms71286/cutandrun/output"
