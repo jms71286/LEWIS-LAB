@@ -7,14 +7,14 @@
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=50gb
 #SBATCH --time=48:00:00
-#SBATCH --output=./MapCutAndRun.%j.out
-#SBATCH --error=./MapCutAndRun.%j.err
+#SBATCH --output=./log.%j.out
+#SBATCH --error=./log.%j.err
 
 cd $SLURM_SUBMIT_DIR
 source configJS.txt
 
 OUTDIR="/scratch/jms71286/cutandrun/output"
-
+FASTQ="/scratch/jms71286/cutandrun/FastqFiles"
 
 # #process reads using trimGalore
 #
