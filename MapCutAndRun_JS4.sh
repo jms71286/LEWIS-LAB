@@ -1,11 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name=MapCutAndRun_JS
+#SBATCH --job-name=cutANDrun4
 #SBATCH --partition=batch
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=jms71286@uga.edu
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
-#SBATCH --mem=50G
+#SBATCH --mem=50gb
 #SBATCH --time=48:00:00
 #SBATCH --output=../MapCutAndRun.%j.out
 #SBATCH --error=../MapCutAndRun.%j.err
@@ -15,135 +15,69 @@ source configJS.txt
 
 OUTDIR="/scratch/jms71286/cutandrun/output"
 
-# Required configuration:
-# FASTQ="/path/to/raw_fastq_directory"
-# GENOME="/path/to/bwa_index_prefix"
-# BIN=10
-# SMOOTH=25
-
-: "${FASTQ:?Set FASTQ in configJS.txt}"
-: "${GENOME:?Set GENOME in configJS.txt}"
-: "${BIN:?Set BIN in configJS.txt}"
-: "${SMOOTH:?Set SMOOTH in configJS.txt}"
-
-THREADS="${SLURM_CPUS_PER_TASK:-24}"
-OUTDIR="/scratch/jms71286/cutandrun/output"
-
-# Make an unmatched filename pattern expand to an empty array.
-shopt -s nullglob
-
-# -------------------------
-# Trim reads, one pair at a time
-# -------------------------
+# #process reads using trimGalore
 module load Trim_Galore/0.6.10-GCCcore-12.3.0
+trim_galore --paired --length 20 --fastqc --gzip -o ${OUTDIR}/TrimmedReads ${FASTQ}/*fastq.gz
+#
+FILE1="${OUTDIR}/TrimmedReads/*R1_001_val_1.fq.gz" #Don't forget the *
+FILE2="${OUTDIR}/TrimmedReads/*R2_001_val_2.fq.gz"
 
-raw_r1_files=( "$FASTQ"/*_R1_001.fastq.gz )
+for f in $FILE1
+do
+#
+# 	#Examples to Get Different parts of the file name
+# 		#See here for details: http://tldp.org/LDP/abs/html/refcards.html#AEN22664
+		#${string//substring/replacement}
+# 		#dir=${f%/*}
 
-if (( ${#raw_r1_files[@]} == 0 )); then
-    echo "ERROR: No *_R1_001.fastq.gz files found in $FASTQ" >&2
-    exit 1
-fi
+	file=${f##*/}
+	#remove ending from file name to create shorter names for bam files and other downstream output
+	name=${file/*_L001_R1_001_val_1.fq.gz/}
 
-raw_r2_files=( "$FASTQ"/*_R2_001.fastq.gz )
+  for f in $FILE2
+  do
+  #
+  # 	#Examples to Get Different parts of the file name
+  # 		#See here for details: http://tldp.org/LDP/abs/html/refcards.html#AEN22664
+  		#${string//substring/replacement}
+  # 		#dir=${f%/*}
 
-if (( ${#raw_r2_files[@]} == 0 )); then
-    echo "ERROR: No *_R2_001.fastq.gz files found in $FASTQ" >&2
-    exit 1
-fi
+  	file=${f##*/}
+  	#remove ending from file name to create shorter names for bam files and other downstream output
+  	name=${file/*_L001_R2_001_val_2.fq.gz/}
 
-    trim_galore \
-        --paired \
-        --length 20 \
-        --fastqc \
-        --gzip \
-        --output_dir "$OUTDIR/TrimmedReads" \
-        "$raw_r1_files" "$raw_r2_files"
-done
+# 	# File Vars
+# 	#use sed to get the name of the second read matching the input file
+read2=$(echo "$f" | sed 's/R1_001_val_1\.fq\.gz/R2_001_val_2\.fq\.gz/g')
+	#variable for naming bam file
+bam="${OUTDIR}/SortedBamFiles/${name}.bam"
+	#variable name for bigwig output
+bigwig="${OUTDIR}/BigWigs/${name}"
+	#QualityBam="${OUTDIR}/SortedBamFiles/${name}_Q30.bam"
+#
 
-# -------------------------
-# Load downstream tools
-# -------------------------
-module load SAMtools/1.23.1-GCC-13.3.0
-module load BWA/0.7.17-GCCcore-11.3.0
-module load deepTools/3.5.5-gfbf-2023a
+ml SAMtools/1.23.1-GCC-13.3.0
+ml BWA/0.7.17-GCCcore-11.3.0
+#
+bwa mem -M -v 3 -t $THREADS $GENOME $f $read2 | samtools view -bhSu - | samtools sort -@ $THREADS -T $OUTDIR/SortedBamFiles/tempReps -o "$bam" -
+samtools index "$bam"
+
+#samtools view -b -q 30 $bam > "$QualityBam"
+#samtools index "$QualityBam"
+
+############################
+# # #deeptools
+
+ml deepTools/3.5.5-gfbf-2023a
+#Plot all reads
+bamCoverage -p $THREADS -bs $BIN --normalizeUsing BPM --minMappingQuality 10 --smoothLength $SMOOTH -of bigwig -b "$bam" -o "${bigwig}.bin_${BIN}.smooth_${SMOOTH}Bulk.bw"
+
+#plot mononucleosomes
+bamCoverage -p $THREADS --MNase -bs 1 --normalizeUsing BPM --minMappingQuality 10 --smoothLength 25 -of bigwig -b "$bam" -o "${bigwig}.bin_${BIN}.smooth_${SMOOTH}_MNase.bw"
+
+#call Peaks
 module load MACS3/3.0.1-gfbf-2023a
 
-# -------------------------
-# Map, create tracks, call peaks
-# -------------------------
-trimmed_r1_files=(
-    "$OUTDIR"/TrimmedReads/*_R1_001_val_1.fq.gz
-)
-
-if (( ${#trimmed_r1_files[@]} == 0 )); then
-    echo "ERROR: No validated R1 files found after trimming" >&2
-    exit 1
-fi
-
-for read1 in "${trimmed_r1_files[@]}"; do
-    read2="${read1%_R1_001_val_1.fq.gz}_R2_001_val_2.fq.gz"
-
-    if [[ ! -s "$read2" ]]; then
-        echo "ERROR: Missing or empty trimmed R2 file: $read2" >&2
-        exit 1
-    fi
-
-    file="${read1##*/}"
-    name="${file%_R1_001_val_1.fq.gz}"
-
-    bam="$OUTDIR/SortedBamFiles/${name}.bam"
-    bigwig="$OUTDIR/BigWigs/${name}"
-
-    echo "Processing: $name"
-
-    # Use one additional sorting thread while BWA runs.
-    bwa mem \
-        -M \
-        -v 3 \
-        -t "$((THREADS - 2))" \
-        "$GENOME" \
-        "$read1" \
-        "$read2" |
-        samtools sort \
-            -@ 1 \
-            -T "$OUTDIR/SortedBamFiles/${name}.tmp.${SLURM_JOB_ID:-$$}" \
-            -o "$bam" \
-            -
-
-    samtools index "$bam"
-
-    bamCoverage \
-        -p "$THREADS" \
-        --binSize "$BIN" \
-        --normalizeUsing BPM \
-        --minMappingQuality 10 \
-        --smoothLength "$SMOOTH" \
-        --outFileFormat bigwig \
-        --bam "$bam" \
-        --outFileName \
-        "${bigwig}.bin_${BIN}.smooth_${SMOOTH}.Bulk.bw"
-
-    bamCoverage \
-        -p "$THREADS" \
-        --MNase \
-        --binSize 1 \
-        --normalizeUsing BPM \
-        --minMappingQuality 10 \
-        --smoothLength 25 \
-        --outFileFormat bigwig \
-        --bam "$bam" \
-        --outFileName \
-        "${bigwig}.bin_1.smooth_25.MNase.bw"
-
-    macs3 callpeak \
-        -t "$bam" \
-        -f BAMPE \
-        -n "$name" \
-        --broad \
-        -g 41037538 \
-        --broad-cutoff 0.1 \
-        --outdir "$OUTDIR/Peaks" \
-        --min-length 800 \
-        --max-gap 500 \
-        --nolambda
+#using --nolambda paramenter to call peaks without control
+macs3 callpeak -t "${bam}" -f BAMPE -n "${name}" --broad -g 41037538 --broad-cutoff 0.1 --outdir "${OUTDIR}/Peaks" --min-length 800 --max-gap 500 --nolambda
 done
