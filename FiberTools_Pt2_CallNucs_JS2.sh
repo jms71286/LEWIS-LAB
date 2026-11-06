@@ -30,8 +30,8 @@ module load SAMtools/1.23.1-GCC-13.3.0
 source activate /home/jms71286/fibertools
 # interact use $ conda activate /home/jms71286/fibertools
 CONDA_ENV="fibertools-rs"
-MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams"
-SORTED_TMP="${MERGED_BASE}/sorted_ONTRun13_tmp"
+MERGED_DIR="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams/ONTRun13"
+SORTED_TMP="/lustre2/scratch/jms71286/FIBER/ONTRun13/MergedBams/sorted_ONTRun13_tmp"
 THREADS="8"
 
 echo "============================================================"
