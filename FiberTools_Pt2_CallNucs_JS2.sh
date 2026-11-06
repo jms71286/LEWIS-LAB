@@ -147,7 +147,6 @@ BAM=("${MERGED_DIR}"/*_merged.bam)
         echo "    ✅  $SAMPLE complete"
 
     done
-done
 
 # =============================================================================
 # Summary — print key QC metrics across all samples
@@ -158,7 +157,7 @@ echo " All done. QC summary:"
 echo "============================================================"
 echo ""
 
-for RUN in ONTRun9 ONTRun10; do
+for RUN in ONTRun13; do
     echo "  $RUN:"
     find "$OUT_DIR/$RUN" -name "*.qc.txt" | sort | while read -r QC; do
         SAMPLE=$(basename "$QC" .qc.txt)
@@ -179,4 +178,3 @@ echo "QC tip: check % fibers with 0 m6A — should be <1% for a"
 echo "successful Hia5 labeling. Mean m6A fraction should be ~5-6%."
 echo ""
 echo "Next: run FiberTools_Pt3_ExtractData.sh"
-done
