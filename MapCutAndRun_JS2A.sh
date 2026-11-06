@@ -65,4 +65,3 @@ bamCoverage -p "$THREADS" --MNase -bs 1 --normalizeUsing BPM --minMappingQuality
 #
 macs3 callpeak -t "${bam}" -f BAMPE -n "${name}" --broad -g 41037538 --broad-cutoff 0.1 --outdir "${OUTDIR}/Peaks" --min-length 800 --max-gap 500 --nolambda
 done
-done
