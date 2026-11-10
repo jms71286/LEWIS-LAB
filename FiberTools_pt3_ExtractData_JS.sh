@@ -33,7 +33,7 @@ set -euo pipefail
 module load Miniforge3/24.11.3-0
 source activate /home/jms71286/fibertools
 
-WORKDIR="/lustre2/scratch/jms71286/ONTRun13/fibertools_results"
+WORKDIR="/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
 GENOME="/home/jms71286/research/genomes/CEA10/GCA_051225625.1.chrom.sizes.txt"
 
 echo "============================================================"
