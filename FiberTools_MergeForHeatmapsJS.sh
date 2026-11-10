@@ -22,7 +22,7 @@
 # NOTE: set -e is intentionally NOT used so one group failure doesn't kill all.
 # =============================================================================
 
-set -uo pipefail
+cd $SLURM_SUBMIT_DIR
 
 module load Miniforge3/24.11.3-0 ucsc/443
 source activate /home/jms71286/fibertools
@@ -251,7 +251,7 @@ echo "============================================================"
 echo " Multi-sample comparison"
 echo "============================================================"
 
-COMPARE_GROUPS="WT_Eddie WT_Rochelle cac-1 cac-2 rtt109 rtt109FLAG"
+COMPARE_GROUPS="barcode07 barcode08 barcode09"
 
 for SIGNAL in m6A msp nuc 5mC; do
 
