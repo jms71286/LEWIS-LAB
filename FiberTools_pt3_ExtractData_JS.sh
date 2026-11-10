@@ -30,7 +30,7 @@
 
 set -euo pipefail
 
-module load Miniforge3/24.11.3-0
+module load Miniforge3/24.11.3-0 ucsc/443
 source activate /home/jms71286/fibertools
 
 WORKDIR="/scratch/jms71286/FIBER/ONTRun13/fibertools_results"
