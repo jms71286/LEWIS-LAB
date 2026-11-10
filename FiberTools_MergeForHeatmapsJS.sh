@@ -43,50 +43,6 @@ if [ ! -f "$TSS_BED" ]; then
 fi
 
 # =============================================================================
-# Helper: extract fractional signal (signal_col / coverage) → bedgraph + BigWig
-# =============================================================================
-make_fraction_tracks() {
-    local BG="$1"
-    local BG4="$2"
-    local BW="$3"
-    local COL="$4"
-
-    if [ ! -f "$BG4" ]; then
-        echo "      Extracting fraction (col$COL / col4) → $(basename $BG4)"
-        awk -v col="$COL" '
-            NR>1 && $4 > 0 {
-                frac = $col / $4
-                print $1"\t"$2"\t"$3"\t"frac
-            }' "$BG" \
-            | sort -k1,1 -k2,2n \
-            | awk -v genome="$GENOME" '
-                BEGIN { while ((getline line < genome) > 0) {
-                    split(line,a,"\t"); chromlen[a[1]]=a[2] } }
-                { if ($2<0) $2=0
-                  if (chromlen[$1] && $3>chromlen[$1]) $3=chromlen[$1]
-                  if ($2<$3) print }
-            ' > "$BG4" || { echo "      ❌  awk failed"; return 1; }
-
-        if [ ! -s "$BG4" ]; then
-            echo "      ❌  Empty output"; rm -f "$BG4"; return 1
-        fi
-        echo "      ✅  $(basename $BG4)"
-    else
-        echo "      ⏭️  $(basename $BG4) exists"
-    fi
-
-    if [ ! -f "$BW" ]; then
-        echo "      Converting → $(basename $BW)"
-        bedGraphToBigWig "$BG4" "$GENOME" "$BW" \
-            && echo "      ✅  $(basename $BW)" \
-            || echo "      ❌  bedGraphToBigWig failed (non-fatal)"
-    else
-        echo "      ⏭️  $(basename $BW) exists"
-    fi
-    return 0
-}
-
-# =============================================================================
 # Main: process all groups — merge, pileup, fractional tracks
 # =============================================================================
 echo "============================================================"
@@ -115,7 +71,7 @@ while read -r LINE; do
 
     # ── Collect nucs.bam files ───────────────────────────────────
     BAMS_TO_MERGE=""
-    for RUN in ONTRun9 ONTRun10; do
+    for RUN in ONTRun13; do
         for BARCODE in $BARCODES; do
             for SAMPLE_DIR in "$FT_RESULTS/$RUN"/*${BARCODE}*/; do
                 [ -d "$SAMPLE_DIR" ] || continue
