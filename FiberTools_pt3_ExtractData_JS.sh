@@ -30,11 +30,11 @@
 
 set -euo pipefail
 
-module load Miniforge3/24.11.3-0 ucsc/443
+module load Miniforge3/24.11.3-0
 source activate /home/jms71286/fibertools
 
 WORKDIR="/lustre2/scratch/jms71286/ONTRun13/fibertools_results"
-GENOME="/home/jms71286/research/genomes/CEA10/GenBankNcrassachromsizes.txt"
+GENOME="/home/jms71286/research/genomes/CEA10/GCA_051225625.1.chrom.sizes.txt"
 
 echo "============================================================"
 echo " FiberTools Pt3: BigWig conversion + ft extract"
@@ -84,7 +84,7 @@ make_bigwig() {
 }
 
 # ── Main loop ────────────────────────────────────────────────────
-for RUN in ONTRun9 ONTRun10; do
+for RUN in ONTRun13; do
 
     RUN_DIR="$WORKDIR/$RUN"
     if [ ! -d "$RUN_DIR" ]; then
