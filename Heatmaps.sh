@@ -35,3 +35,20 @@ Download heatmap.bed to desktop (from /scratch/jms71286/FIBER/ONTRun13/HeatmapWG
 Download _merged.m6Apileup.bw (from analysis) to desktop
 Download GCA_051225625.1_liftoff.gff3 to desktop
 upload files in IGV
+
+#to merge 3 replicates into one merged bw:
+bigwigAverage \
+  -b m6A_R1.bw m6A_R2.bw m6A_R3.bw \
+  -o m6A_replicates_mean.bw \
+  --binSize 10 \
+  --numberOfProcessors 8
+
+  bigwigAverage \
+    -b /lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results/ONTRun13/ONTRun13_CEA10_conidia3_barcode09_merged/ONTRun13_CEA10_conidia3_barcode09_merged.m6Apileup.bw /lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results/ONTRun13/ONTRun13_CEA10_conidia2_barcode08_merged/ONTRun13_CEA10_conidia2_barcode08_merged.m6Apileup.bw /lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results/ONTRun13/ONTRun13_CEA10_conidia1_barcode07_merged/ONTRun13_CEA10_conidia1_barcode07_merged.m6Apileup.bw \
+    -o /lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results/ONTRun13/m6A_mean3reps.bw \
+    --binSize 10 \
+    --numberOfProcessors 8
+
+computeMatrix reference-point -p 12 -R "/home/jms71286/research/genomes/CEA10/GCA_051225625.1_TSS_CEA10.bed" -S /lustre2/scratch/jms71286/FIBER/ONTRun13/fibertools_results/ONTRun13/m6A_mean3reps.bw	-o /lustre2/scratch/jms71286/FIBER/ONTRun13/HeatmapWGenome/m6A_mean3repsHM.mat 	--sortRegions keep --missingDataAsZero -bs 10 -a 1500 -b 1000
+
+plotHeatmap -m /lustre2/scratch/jms71286/FIBER/ONTRun13/HeatmapWGenome/m6A_mean3repsHM.mat -o /lustre2/scratch/jms71286/FIBER/ONTRun13/HeatmapWGenome/m6A_mean3repsHM.png  --sortRegions descend  --sortUsingSamples 1  --outFileSortedRegions /lustre2/scratch/jms71286/FIBER/ONTRun13/HeatmapWGenome/m6A_mean3repsHM.bed  --startLabel "5'"  --endLabel "3'"  --boxAroundHeatmaps yes  --samplesLabel "m6A_mean3reps" --colorMap 'Greens'  --sortUsing mean --heatmapHeight 16  --heatmapWidth 4
